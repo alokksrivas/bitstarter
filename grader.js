@@ -55,6 +55,26 @@ var checkHtmlFile = function(htmlfile, checksfile) {
     return out;
 };
 
+var UrltoHtmlStr = function(url) {
+    var rest = require('restler');
+    var resultstr = rest.get(url).on('complete', function(result) {
+        var string = result.request.res.rawEncode;
+        return string;
+    });
+    return resultstr;
+};
+
+var checkUrl = function(url, checksfile) {
+    $ = UrltoHtmlStr(url);
+    var checks = loadChecks(checksfile).sort();
+    var out = {};
+    for(var ii in checks) {
+        var present = $(checks[ii]).length > 0;
+        out[checks[ii]] = present;
+    }
+    return out;
+};
+
 var clone = function(fn) {
     // Workaround for commander.js issue.
     // http://stackoverflow.com/a/6772648
@@ -64,9 +84,14 @@ var clone = function(fn) {
 if(require.main == module) {
     program
         .option('-f, --file <html_file>', 'Path to index.html', clone(assertFileExists), HTMLFILE_DEFAULT)
+        .option('-u, --url <url>', 'A fully qualified URL')
         .option('-c, --checks <check_file>', 'Path to checks.json', clone(assertFileExists), CHECKSFILE_DEFAULT)
+       
         .parse(process.argv);
-    var checkJson = checkHtmlFile(program.file, program.checks);
+    if (program.file)
+      var checkJson = checkHtmlFile(program.file, program.checks);
+    else if (program.url)
+      var checkJson = checkUrl(program.url, program.checks);
     var outJson = JSON.stringify(checkJson, null, 4);
     console.log(outJson);
 } else {
